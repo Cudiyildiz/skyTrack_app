@@ -1,4 +1,4 @@
-import 'package:intl/intl.dart';  // intl paketini import edin
+import 'package:intl/intl.dart';
 
 class Weather {
   String sehir;
@@ -13,6 +13,7 @@ class Weather {
   double uv;
 
   List<DailyForecast> dailyForecasts;
+  List<HourlyForecast> hourlyData; // Yeni: Saatlik tahminler
 
   Weather.fromMap(Map<String, dynamic> weatherMap)
       : sehir = weatherMap["location"]["name"] ?? "",
@@ -27,6 +28,9 @@ class Weather {
         uv = weatherMap["current"]["uv"]?.toDouble() ?? 0.0,
         dailyForecasts = (weatherMap["forecast"]["forecastday"] as List)
             .map((forecast) => DailyForecast.fromMap(forecast))
+            .toList(),
+        hourlyData = (weatherMap["forecast"]["forecastday"][0]["hour"] as List) // İlk günün saatlik verileri
+            .map((hour) => HourlyForecast.fromMap(hour))
             .toList();
 
   static String _translateCondition(String condition) {
@@ -34,10 +38,9 @@ class Weather {
     return weatherConditionTranslation[normalizedCondition] ?? condition;
   }
 
-  // Tarih formatını gün adına çevirme fonksiyonu
   static String getDayName(String date) {
-    DateTime parsedDate = DateFormat('yyyy-MM-dd').parse(date);  // Tarihi DateTime objesine çeviriyoruz
-    return DateFormat('EEEE', 'tr_TR').format(parsedDate);  // Türkçe gün adı alıyoruz
+    DateTime parsedDate = DateFormat('yyyy-MM-dd').parse(date);
+    return DateFormat('EEEE', 'tr_TR').format(parsedDate);
   }
 }
 
@@ -55,20 +58,33 @@ class DailyForecast {
         maxSicaklik = forecastMap["day"]["maxtemp_c"]?.toDouble() ?? 0.0,
         minSicaklik = forecastMap["day"]["mintemp_c"]?.toDouble() ?? 0.0;
 
-  // Gün adı fonksiyonunu kullanarak tarih yerine gün adını döndüreceğiz
   String getFormattedDay() {
-    return Weather.getDayName(tarih); // tarih bilgisini gün adına çeviriyoruz
+    return Weather.getDayName(tarih);
   }
 }
 
-// Çeviri haritası
+class HourlyForecast {
+  String time; // Saat bilgisi
+  double tempC; // Sıcaklık
+  double precipMm; // Yağış miktarı
+  String condition; // Hava durumu açıklaması
+  String icon; // Hava durumu ikonu
+
+  HourlyForecast.fromMap(Map<String, dynamic> hourMap)
+      : time = hourMap["time"] ?? "",
+        tempC = hourMap["temp_c"]?.toDouble() ?? 0.0,
+        precipMm = hourMap["precip_mm"]?.toDouble() ?? 0.0,
+        condition = Weather._translateCondition(hourMap["condition"]["text"]),
+        icon = "https:${hourMap["condition"]["icon"] ?? ""}";
+}
+
 Map<String, String> weatherConditionTranslation = {
   "partly cloudy": "Parçalı bulutlu",
   "sunny": "Güneşli",
   "rain": "Yağmurlu",
   "cloudy": "Bulutlu",
   "patchy rain nearby": "Yakınlarda yer yer yağmur",
-  "clear": "Açık",
+  "clear": "Açık hava",
   "mist": "Sisli",
   "snow": "Karlı",
   "thunderstorm": "Gök gürültülü",
@@ -84,4 +100,5 @@ Map<String, String> weatherConditionTranslation = {
   "dust": "Toz",
   "sand": "Kum",
   "tornado": "Kasırga",
+  "overcast": "Kapalı hava"
 };
